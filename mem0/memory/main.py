@@ -324,6 +324,26 @@ def _build_session_scope(filters):
     return "&".join(parts)
 
 
+def _normalize_extracted_memories(extracted_memories):
+    """Normalize additive extraction output to memory objects.
+
+    Some local LLMs return {"memory": ["..."]} even when the prompt requests
+    {"memory": [{"text": "..."}]}. Treat string items as memory text so the
+    v3 add pipeline can continue instead of failing on str.get().
+    """
+    normalized = []
+    for item in extracted_memories or []:
+        if isinstance(item, str):
+            text = item.strip()
+            if text:
+                normalized.append({"text": text})
+        elif isinstance(item, dict):
+            normalized.append(item)
+        else:
+            logger.warning(f"Skipping unsupported extracted memory item: {item}")
+    return normalized
+
+
 setup_config()
 logger = logging.getLogger(__name__)
 
@@ -761,6 +781,7 @@ class Memory(MemoryBase):
         except Exception as e:
             logger.error(f"Error parsing extraction response: {e}")
             extracted_memories = []
+        extracted_memories = _normalize_extracted_memories(extracted_memories)
 
         if not extracted_memories:
             # Save messages even if nothing extracted
@@ -2178,6 +2199,7 @@ class AsyncMemory(MemoryBase):
         except Exception as e:
             logger.error(f"Error parsing extraction response (async): {e}")
             extracted_memories = []
+        extracted_memories = _normalize_extracted_memories(extracted_memories)
 
         if not extracted_memories:
             await asyncio.to_thread(self.db.save_messages, messages, session_scope)
