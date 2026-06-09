@@ -286,10 +286,15 @@ def remove_spaces_from_entities(
             continue
         if not all(key in item for key in required):
             continue
-        item["source"] = item["source"].lower().replace(" ", "_")
-        rel = item["relationship"].lower().replace(" ", "_")
-        item["relationship"] = sanitize_relationship_for_cypher(rel) if sanitize_relationship else rel
-        item["destination"] = item["destination"].lower().replace(" ", "_")
+        source = item["source"]
+        rel = item["relationship"]
+        dest = item["destination"]
+        if not isinstance(source, str) or not isinstance(rel, str) or not isinstance(dest, str):
+            continue
+        item["source"] = source.lower().replace(" ", "_")
+        normalized_rel = rel.lower().replace(" ", "_")
+        item["relationship"] = sanitize_relationship_for_cypher(normalized_rel) if sanitize_relationship else normalized_rel
+        item["destination"] = dest.lower().replace(" ", "_")
         cleaned.append(item)
     return cleaned
 
