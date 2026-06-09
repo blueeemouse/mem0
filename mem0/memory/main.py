@@ -586,9 +586,8 @@ class Memory(MemoryBase):
                     new_retrieved_facts = json.loads(extracted_json, strict=False)["facts"]
                 new_retrieved_facts = normalize_facts(new_retrieved_facts)
         except Exception as e:
-            logger.error(f"Error parsing extraction response: {e}")
-            extracted_memories = []
-        extracted_memories = _normalize_extracted_memories(extracted_memories)
+            logger.error(f"Error in new_retrieved_facts: {e}")
+            new_retrieved_facts = []
 
         if not new_retrieved_facts:
             logger.debug("No new facts retrieved from input. Skipping memory update LLM call.")
@@ -1699,9 +1698,8 @@ class AsyncMemory(MemoryBase):
                     new_retrieved_facts = json.loads(extracted_json, strict=False)["facts"]
                 new_retrieved_facts = normalize_facts(new_retrieved_facts)
         except Exception as e:
-            logger.error(f"Error parsing extraction response (async): {e}")
-            extracted_memories = []
-        extracted_memories = _normalize_extracted_memories(extracted_memories)
+            logger.error(f"Error in new_retrieved_facts: {e}")
+            new_retrieved_facts = []
 
         if not new_retrieved_facts:
             logger.debug("No new facts retrieved from input. Skipping memory update LLM call.")
