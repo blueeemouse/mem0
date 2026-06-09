@@ -250,6 +250,36 @@ def _build_filters_and_metadata(
     return base_metadata_template, effective_query_filters
 
 
+def _build_session_scope(filters):
+    """Build deterministic session scope string from entity IDs."""
+    parts = []
+    for key in sorted(["user_id", "agent_id", "run_id"]):
+        val = filters.get(key)
+        if val:
+            parts.append(f"{key}={val}")
+    return "&".join(parts)
+
+
+def _normalize_extracted_memories(extracted_memories):
+    """Normalize additive extraction output to memory objects.
+
+    Some local LLMs return {"memory": ["..."]} even when the prompt requests
+    {"memory": [{"text": "..."}]}. Treat string items as memory text so the
+    v3 add pipeline can continue instead of failing on str.get().
+    """
+    normalized = []
+    for item in extracted_memories or []:
+        if isinstance(item, str):
+            text = item.strip()
+            if text:
+                normalized.append({"text": text})
+        elif isinstance(item, dict):
+            normalized.append(item)
+        else:
+            logger.warning(f"Skipping unsupported extracted memory item: {item}")
+    return normalized
+
+
 setup_config()
 logger = logging.getLogger(__name__)
 
@@ -556,8 +586,9 @@ class Memory(MemoryBase):
                     new_retrieved_facts = json.loads(extracted_json, strict=False)["facts"]
                 new_retrieved_facts = normalize_facts(new_retrieved_facts)
         except Exception as e:
-            logger.error(f"Error in new_retrieved_facts: {e}")
-            new_retrieved_facts = []
+            logger.error(f"Error parsing extraction response: {e}")
+            extracted_memories = []
+        extracted_memories = _normalize_extracted_memories(extracted_memories)
 
         if not new_retrieved_facts:
             logger.debug("No new facts retrieved from input. Skipping memory update LLM call.")
@@ -1668,8 +1699,9 @@ class AsyncMemory(MemoryBase):
                     new_retrieved_facts = json.loads(extracted_json, strict=False)["facts"]
                 new_retrieved_facts = normalize_facts(new_retrieved_facts)
         except Exception as e:
-            logger.error(f"Error in new_retrieved_facts: {e}")
-            new_retrieved_facts = []
+            logger.error(f"Error parsing extraction response (async): {e}")
+            extracted_memories = []
+        extracted_memories = _normalize_extracted_memories(extracted_memories)
 
         if not new_retrieved_facts:
             logger.debug("No new facts retrieved from input. Skipping memory update LLM call.")
