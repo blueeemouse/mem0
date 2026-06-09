@@ -264,7 +264,10 @@ class MemoryGraph:
                 if tool_call["name"] != "extract_entities":
                     continue
                 for item in tool_call.get("arguments", {}).get("entities", []):
-                    entity_type_map[item["entity"]] = item["entity_type"]
+                    entity = item.get("entity")
+                    if not entity:
+                        continue
+                    entity_type_map[entity] = item.get("entity_type", "unknown")
         except Exception as e:
             logger.exception(
                 f"Error in search tool: {e}, llm_provider={self.llm_provider}, search_results={search_results}"
