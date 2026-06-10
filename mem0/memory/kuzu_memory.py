@@ -264,6 +264,8 @@ class MemoryGraph:
                 if tool_call["name"] != "extract_entities":
                     continue
                 for item in tool_call.get("arguments", {}).get("entities", []):
+                    if not isinstance(item, dict):
+                        continue
                     entity = item.get("entity")
                     if not entity:
                         continue
